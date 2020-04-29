@@ -1,11 +1,11 @@
-﻿using AzureBusSample.Context;
-using AzureBusSample.Entity;
+﻿using AzureBusSample.Entity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.ServiceBus;
 using Microsoft.Extensions.Configuration;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
+using Newtonsoft.Json;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -15,21 +15,17 @@ namespace AzureBusSample.Controllers
     [Route("api/[controller]")]
     public class ProductController : ControllerBase
     {
-        protected readonly DataContext _dataContext;
         private readonly IConfiguration _configuration;
 
-        public ProductController(DataContext dataContext, IConfiguration configuration)
+        public ProductController(IConfiguration configuration)
         {
-            _dataContext = dataContext;
             _configuration = configuration;
         }
 
         [HttpPost]
-        public async Task<IActionResult> Save(IFormFile file, [FromForm]Product product)
+        public async Task<IActionResult> Save(IFormFile file, [FromForm] Product product)
         {
             product.ImageUrl = await Upload(file);
-
-            await SaveDatabase(product);
             await SendMessage(product);
 
             return Ok(true);
@@ -52,21 +48,17 @@ namespace AzureBusSample.Controllers
             return blob.SnapshotQualifiedStorageUri.PrimaryUri.ToString();
         }
 
-        private async Task SaveDatabase(Product product)
-        {
-            await _dataContext.Products.AddAsync(product);
-            await _dataContext.SaveChangesAsync();
-        }
-
         private async Task SendMessage(Product product)
         {
             var serviceBusConnectionString = "Endpoint=sb://pagottomanzan.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=u+rnqaa+MyOmLSXocFvKyPTAmQ26Mdrj4HcSdSe6Ff4=";
             var queueName = "product";
 
             var client = new QueueClient(serviceBusConnectionString, queueName, ReceiveMode.ReceiveAndDelete);
-            var body = Encoding.UTF8.GetBytes(product.ToString());
 
-            await client.SendAsync(new Message(body));
+            string messageBody = JsonConvert.SerializeObject(product);
+            var message = new Message(Encoding.UTF8.GetBytes(messageBody));
+            await client.SendAsync(message);
+            await client.CloseAsync();
         }
     }
 }
