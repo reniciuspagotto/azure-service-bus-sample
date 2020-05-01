@@ -50,7 +50,7 @@ namespace AzureBusSample.Controllers
 
         private async Task SendMessage(Product product)
         {
-            var serviceBusConnectionString = "Endpoint=sb://pagottomanzan.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=u+rnqaa+MyOmLSXocFvKyPTAmQ26Mdrj4HcSdSe6Ff4=";
+            var serviceBusConnectionString = "<your service bus connection string>";
             var queueName = "product";
 
             var client = new QueueClient(serviceBusConnectionString, queueName, ReceiveMode.ReceiveAndDelete);
